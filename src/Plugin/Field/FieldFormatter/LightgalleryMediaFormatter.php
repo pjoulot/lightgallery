@@ -85,6 +85,10 @@ class LightgalleryMediaFormatter extends LightgalleryFormatter {
         $ent = $media->field_media_video_file->entity;
         $slide_url = $ent->createFileUrl();
       }
+      else if ($media->bundle() === 'remote_video') {
+        $field = $media->get('field_media_oembed_video');
+        $slide_url = $field->value;
+      }
       else if ($media->bundle() === 'image') {
         $field = $media->get('field_media_image');
         $ent = $media->field_media_image->entity;
