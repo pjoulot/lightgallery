@@ -5,7 +5,7 @@ namespace Drupal\lightgallery\Plugin\Field\FieldFormatter;
 use Drupal\file\Entity\File;
 use Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem;
 use Drupal\Core\Field\FieldItemListInterface;
-
+use Drupal\image\Entity\ImageStyle;
 use Drupal\lightgallery\Manager\LightgalleryManager;
 use Drupal\lightgallery\Optionset\LightgalleryOptionset;
 
@@ -75,32 +75,48 @@ class LightgalleryMediaFormatter extends LightgalleryFormatter {
     /** @var \Drupal\media\MediaInterface $media */
     foreach ($media_items as $delta => $media) {
       $item_detail = array();
-     
+
+      if ($media->hasField('thumbnail')) {
+        $thumbUri = $media->get('thumbnail')->first()->entity->getFileUri();
+      }
+
       if ($media->bundle() === 'video') {
         $field = $media->get('field_media_video_file');
         $ent = $media->field_media_video_file->entity;
+        $slide_url = $ent->createFileUrl();
       }
       else if ($media->bundle() === 'image') {
         $field = $media->get('field_media_image');
         $ent = $media->field_media_image->entity;
+        $thumbUri = $ent->getFileUri();
+        if (!empty($lightgallery_image_style)) {
+          $slide_url = ImageStyle::load($lightgallery_image_style)
+            ->buildUrl($ent->getFileUri());
+        }
+        else {
+          $slide_url = $ent->createFileUrl();
+        }
       }
       else {
-        // 
         continue;
       }
+
+      // Generate the thumbnail.
+      if (!empty($thumb_image_style)) {
+        $item_detail['thumb'] = ImageStyle::load($thumb_image_style)
+          ->buildUrl($thumbUri);
+      }
+      else {
+        $item_detail['thumb'] = file_create_url($thumbUri);
+      }
+
       $item_detail['alt'] = $field->alt;
       $item_detail['title'] = $field->title;
       $item_detail['width'] = $field->width;
       $item_detail['height'] = $field->height;
-      $item_detail['slide'] = $ent->createFileUrl();
+      $item_detail['slide'] = $slide_url;
       $item_detail['type'] = $media->bundle();
-      if ($media->hasField('thumbnail')) {
-        $item_detail['thumb'] = $media->get('thumbnail')->first()->entity->createFileUrl();
-      }
-      else {
-        $item_detail['thumb'] = $item_detail['slide'];
-      }
-     
+
       $new_items[] = $item_detail;
     }
 
@@ -118,7 +134,7 @@ class LightgalleryMediaFormatter extends LightgalleryFormatter {
        '#id' => $unique_id,
        '#attached' => $lightgallery_manager->loadLibraries($unique_id),
      );
- 
+
      return $content;
   }
 }
